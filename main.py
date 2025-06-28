@@ -1,8 +1,13 @@
 import os
 import zipfile
+
+import requests
+
 from api_uploader.api_uploader import GuideUploader
 from image_optimizer.archive_processor import process_archive
 from word_to_html_converter import WordToHtmlConverter
+
+API_URL = 'http://localhost:8000/materials/api/courses-with-levels/'
 
 
 def main():
@@ -50,15 +55,35 @@ def main():
                 with zipfile.ZipFile(clean_images_zip, 'r') as img_zip:
                     for img_file in img_zip.namelist():
                         final_zip.writestr(f'images/{img_file}', img_zip.read(img_file))
-
+            """
             print("\n✅ Финальная структура архива:")
             with zipfile.ZipFile(upload_zip_path, 'r') as z:
                 for file in z.namelist():
                     print(f"- {file}")
+            """
 
         except Exception as e:
             print(f"❌ Ошибка обработки: {e}")
             return
+
+        response = requests.get(API_URL)
+        response.raise_for_status()
+
+        data = response.json()
+
+        print("\n📚 Доступные курсы и уровни:")
+        for course in data['courses']:
+            print(f"📘 {course['course_title']} (Course ID: {course['course_id']})")
+            for level in course['levels']:
+                print(f"  └── 📗 {level['level_title']} (Level ID: {level['level_id']})")
+
+        # 👉 2. Ввод ID уровня
+        level_id_input = input("\nВведите ID нужного уровня для загрузки: ").strip()
+        if not level_id_input.isdigit():
+            print("❌ Некорректный ID. Загрузка отменена.")
+            exit()
+
+        level_id = int(level_id_input)
 
         # 3. Загрузка на сервер
         print("\n🔄 Шаг 3/3: Загрузка на сервер...")
@@ -67,7 +92,7 @@ def main():
             response = uploader.upload_guide(
                 html_path=html_path,
                 zip_path=upload_zip_path,
-                level_id=7,
+                level_id=level_id,
                 title=os.path.splitext(os.path.basename(original_zip_path))[0],
                 order=0
             )
