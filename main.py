@@ -4,10 +4,9 @@ import zipfile
 import requests
 
 from api_uploader.api_uploader import GuideUploader
+from constants import API_COURSES_IDS
 from image_optimizer.archive_processor import process_archive
 from word_to_html_converter import WordToHtmlConverter
-
-API_URL = 'http://localhost:8000/materials/api/courses-with-levels/'
 
 
 def main():
@@ -66,7 +65,7 @@ def main():
             print(f"❌ Ошибка обработки: {e}")
             return
 
-        response = requests.get(API_URL)
+        response = requests.get(API_COURSES_IDS)
         response.raise_for_status()
 
         data = response.json()

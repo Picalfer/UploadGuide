@@ -1,14 +1,16 @@
 import os
-from typing import Tuple, Dict
+from typing import Dict
 
 import requests
+
+from constants import API_GUIDE_UPLOAD
 
 
 class GuideUploader:
     def __init__(self, config_path: str = 'api_config.txt'):
-        self.api_url, self.auth = self._load_config(config_path)
+        self.auth = self.load_config(config_path)
 
-    def _load_config(self, config_path: str) -> Tuple[str, Tuple[str, str]]:
+    def load_config(self, config_path: str) -> tuple[str, str]:
         """Загружает конфигурацию из файла"""
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Конфиг файл не найден: {config_path}")
@@ -16,10 +18,10 @@ class GuideUploader:
         with open(config_path, 'r') as f:
             lines = [line.strip() for line in f.readlines() if line.strip()]
 
-        if len(lines) < 3:
-            raise ValueError("Неверный формат конфиг файла. Нужны: URL, логин, пароль")
+        if len(lines) < 2:
+            raise ValueError("Неверный формат конфиг файла. Нужны: логин, пароль")
 
-        return lines[0], (lines[1], lines[2])
+        return lines[0], lines[1]
 
     def upload_guide(self, html_path: str, zip_path: str, level_id: int, title: str, order: int = 0) -> Dict:
         """Загружает методичку на сервер"""
@@ -39,7 +41,7 @@ class GuideUploader:
                 }
 
                 response = requests.post(
-                    url=self.api_url,
+                    url=API_GUIDE_UPLOAD,
                     files=files,
                     data=data,
                     auth=self.auth
