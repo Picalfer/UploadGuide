@@ -10,6 +10,12 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
+def select_and_convert():
+    converter = WordToHtmlConverter()
+    success, path = converter.convert()
+    if not success or not path:
+        raise ValueError("Ошибка конвертации")
+    return path
 
 class WordToHtmlConverter:
     """

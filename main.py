@@ -1,70 +1,29 @@
 import os
-import zipfile
 
 import requests
 
 from api_uploader.api_uploader import GuideUploader
 from constants import API_COURSES_IDS
 from image_optimizer.archive_processor import process_archive
-from word_to_html_converter import WordToHtmlConverter
+from word_to_html_converter.word_to_html_converter import select_and_convert
 
 
 def main():
     try:
-        # 1. Конвертация Word -> HTML+ZIP
+        # 1. Конвертация Word -> ZIP
         print("🔄 Шаг 1/3: Конвертация Word в ZIP...")
-        converter = WordToHtmlConverter()
-        success, original_zip_path = converter.convert()
-
-        if not success:
-            print("❌ Ошибка конвертации Word в ZIP")
-            return
-
+        original_zip_path = select_and_convert()
         print(f"✅ ZIP создан: {original_zip_path}")
 
         # 2. Оптимизация изображений
         print("\n🔄 Шаг 2/3: Оптимизация изображений...")
-        try:
-            result_folder = process_archive(zip_path=original_zip_path)
+        html_path, upload_zip_path = process_archive(zip_path=original_zip_path)
+        print(f"✅ Оптимизация завершена! HTML: {html_path}")
 
-            # Находим единственный HTML файл
-            html_files = [f for f in os.listdir(result_folder)
-                          if f.endswith('.html')]
+        # 3. Дальнейшие действия с html_path и upload_zip_path...
+        print("✅ Оптимизация завершена!")
 
-            if len(html_files) != 1:
-                raise ValueError(f"Найдено {len(html_files)} HTML файлов, должен быть 1")
-
-            html_path = os.path.join(result_folder, html_files[0])
-            images_zip_path = os.path.join(result_folder, 'images.zip')
-
-            # Создаем чистый архив БЕЗ HTML в images.zip
-            clean_images_zip = os.path.join(result_folder, 'clean_images.zip')
-            with zipfile.ZipFile(images_zip_path, 'r') as src_zip, \
-                    zipfile.ZipFile(clean_images_zip, 'w') as dst_zip:
-
-                for item in src_zip.namelist():
-                    if not item.endswith('.html'):  # Исключаем HTML файлы
-                        dst_zip.writestr(item, src_zip.read(item))
-
-            # Создаем финальный архив для загрузки
-            upload_zip_path = os.path.join(result_folder, 'upload.zip')
-            with zipfile.ZipFile(upload_zip_path, 'w') as final_zip:
-
-                # Добавляем только изображения в папку images/
-                with zipfile.ZipFile(clean_images_zip, 'r') as img_zip:
-                    for img_file in img_zip.namelist():
-                        final_zip.writestr(f'images/{img_file}', img_zip.read(img_file))
-            """
-            print("\n✅ Финальная структура архива:")
-            with zipfile.ZipFile(upload_zip_path, 'r') as z:
-                for file in z.namelist():
-                    print(f"- {file}")
-            """
-
-        except Exception as e:
-            print(f"❌ Ошибка обработки: {e}")
-            return
-
+        # 👉 2. Ввод ID уровня
         response = requests.get(API_COURSES_IDS)
         response.raise_for_status()
 
@@ -76,7 +35,6 @@ def main():
             for level in course['levels']:
                 print(f"  └── 📗 {level['level_title']} (Level ID: {level['level_id']})")
 
-        # 👉 2. Ввод ID уровня
         level_id_input = input("\nВведите ID нужного уровня для загрузки: ").strip()
         if not level_id_input.isdigit():
             print("❌ Некорректный ID. Загрузка отменена.")
