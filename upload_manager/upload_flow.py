@@ -5,6 +5,7 @@ import requests
 
 from constants import API_COURSES_IDS
 from .guide_uploader import upload_guide  # Импортируем конкретную функцию
+from .level_cache import save_last_level, load_last_level
 
 
 def get_available_courses(api_url: str) -> Dict:
@@ -15,7 +16,9 @@ def get_available_courses(api_url: str) -> Dict:
 
 
 def select_level_interactive(courses_data: Dict) -> int:
-    """Интерактивный выбор уровня с CLI"""
+    """Интерактивный выбор уровня с возможностью использовать последний"""
+    last_level = load_last_level()
+
     print("\n📚 Доступные курсы и уровни:")
     for course in courses_data['courses']:
         print(f"📘 {course['course_title']} (Course ID: {course['course_id']})")
@@ -23,10 +26,24 @@ def select_level_interactive(courses_data: Dict) -> int:
             print(f"  └── 📗 {level['level_title']} (Level ID: {level['level_id']})")
 
     while True:
-        level_id = input("\nВведите ID нужного уровня для загрузки: ").strip()
-        if level_id.isdigit():
-            return int(level_id)
-        print("❌ Некорректный ID. Попробуйте еще раз.")
+        if last_level:
+            prompt = (
+                f"\nВведите ID нужного уровня (или 'y' для использования "
+                f"последнего уровня {last_level}): "
+            )
+        else:
+            prompt = "\nВведите ID нужного уровня: "
+
+        user_input = input(prompt).strip().lower()
+
+        if user_input == 'y' and last_level:
+            return last_level
+        elif user_input.isdigit():
+            level_id = int(user_input)
+            save_last_level(level_id)  # Сохраняем новый выбор
+            return level_id
+
+        print("❌ Некорректный ввод. Введите ID уровня или 'y'")
 
 
 def process_upload_flow(
@@ -36,20 +53,11 @@ def process_upload_flow(
         courses_api_url: str = API_COURSES_IDS,
         auth_config_path: str = 'api_config.txt'
 ) -> Optional[Dict]:
-    """
-    Полный процесс загрузки методички:
-    1. Получение списка курсов
-    2. Выбор уровня
-    3. Загрузка на сервер
-    """
+    """Полный процесс загрузки с сохранением последнего уровня"""
     try:
-        # Получаем данные о курсах
         courses_data = get_available_courses(courses_api_url)
-
-        # Выбираем уровень
         level_id = select_level_interactive(courses_data)
 
-        # Подготавливаем метаданные
         title = os.path.splitext(os.path.basename(original_zip_path))[0]
 
         print("\n🔄 Загрузка на сервер...")
