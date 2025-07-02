@@ -89,7 +89,7 @@ def select_order_interactive(guides_data: Dict, level_id: int) -> int:
 
 def process_upload_flow(
         html_path: str,
-        assets_zip_path: str,
+        assets_zip_path: Optional[str],  # Явно указываем, что может быть None
         original_zip_path: str,
         auth_config_path: str = 'api_config.txt'
 ) -> Optional[Dict]:
@@ -111,14 +111,21 @@ def process_upload_flow(
         title = os.path.splitext(os.path.basename(original_zip_path))[0]
 
         print("\n🔄 Загрузка на сервер...")
-        response = upload_guide(
-            html_path=html_path,
-            zip_path=assets_zip_path,
-            level_id=level_id,
-            title=title,
-            order=order,
-            config_path=auth_config_path
-        )
+
+        # Формируем параметры для upload_guide
+        upload_kwargs = {
+            'html_path': html_path,
+            'level_id': level_id,
+            'title': title,
+            'order': order,
+            'config_path': auth_config_path
+        }
+
+        # Добавляем zip_path только если он указан и существует
+        if assets_zip_path and os.path.exists(assets_zip_path):
+            upload_kwargs['zip_path'] = assets_zip_path
+
+        response = upload_guide(**upload_kwargs)
 
         print(f"✅ Успешно загружено как методичка #{order}!")
         return response

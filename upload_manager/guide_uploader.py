@@ -22,25 +22,32 @@ def load_auth_config(config_path: str = 'api_config.txt') -> Tuple[str, str]:
 
 def upload_guide(
         html_path: str,
-        zip_path: str,
         level_id: int,
         title: str,
         config_path: str = 'api_config.txt',
-        order: int = 0
+        order: int = 0,
+        zip_path: str = None  # Делаем параметр опциональным
 ) -> Dict:
-    """Базовая функция загрузки файлов на сервер"""
-    if not all(os.path.exists(p) for p in [html_path, zip_path]):
-        raise FileNotFoundError("Один из файлов не найден")
+    """Функция загрузки файлов на сервер (zip-архив опционален)"""
+    if not os.path.exists(html_path):
+        raise FileNotFoundError(f"HTML файл не найден: {html_path}")
+
+    if zip_path and not os.path.exists(zip_path):
+        raise FileNotFoundError(f"ZIP архив не найден: {zip_path}")
 
     auth = load_auth_config(config_path)
 
-    with open(html_path, 'rb') as html_file, open(zip_path, 'rb') as assets_file:
+    # Подготавливаем файлы для отправки
+    files = {
+        'html_file': open(html_path, 'rb')
+    }
+    if zip_path:
+        files['assets_zip'] = open(zip_path, 'rb')
+
+    try:
         response = requests.post(
             url=API_GUIDE_UPLOAD,
-            files={
-                'html_file': html_file,
-                'assets_zip': assets_file
-            },
+            files=files,
             data={
                 'level_id': level_id,
                 'title': title,
@@ -50,3 +57,7 @@ def upload_guide(
         )
         response.raise_for_status()
         return response.json()
+    finally:
+        # Закрываем все открытые файлы
+        for file in files.values():
+            file.close()

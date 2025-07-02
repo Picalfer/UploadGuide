@@ -2,28 +2,14 @@ import os
 import shutil
 import tempfile
 import zipfile
-from typing import Optional, Tuple
+from typing import Optional
 
 from .compress import optimize_image
 from .reporter import ArchiveReporter
 
 
-def process_archive(zip_path: str, max_size_kb: int = 300, output_folder: Optional[str] = None) -> Tuple[str, str]:
-    """
-    Оптимизирует изображения в ZIP-архиве и возвращает пути к HTML и новому ZIP.
-
-    Args:
-        zip_path: Путь к исходному ZIP-архиву
-        max_size_kb: Максимальный размер изображений в КБ
-        output_folder: Папка для результатов (по умолчанию рядом с архивом)
-
-    Returns:
-        Кортеж (html_path, upload_zip_path)
-
-    Raises:
-        ValueError: Если не найден HTML или изображения
-        OSError: При ошибках файловой системы
-    """
+def process_archive(zip_path: str, max_size_kb: int = 300, output_folder: Optional[str] = None) -> tuple[str, None] | \
+                                                                               tuple[str, str]:
     try:
         # Валидация входных данных
         if not os.path.exists(zip_path):
@@ -52,8 +38,13 @@ def process_archive(zip_path: str, max_size_kb: int = 300, output_folder: Option
                 break
 
         if not images_dir:
-            reporter.close()
-            raise FileNotFoundError("Папка 'images' не найдена в архиве")
+            print("ℹ️ Картинки не найдены, пропускаем шаг оптимизации.")
+            # Ищем HTML
+            html_files = [f for f in os.listdir(output_folder) if f.endswith('.html')]
+            if len(html_files) != 1:
+                raise ValueError(f"Найдено {len(html_files)} HTML файлов, должен быть 1")
+            html_path = os.path.join(output_folder, html_files[0])
+            return html_path, None
 
         # Подсчет статистики
         image_files = [f for f in os.listdir(images_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
