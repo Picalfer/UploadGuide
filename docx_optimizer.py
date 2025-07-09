@@ -1,5 +1,10 @@
+import io
+import zipfile
+from pathlib import Path
 from tkinter import Tk
 from tkinter import filedialog
+
+from PIL import Image
 
 
 def select_word_file() -> str:
@@ -59,11 +64,6 @@ def extract_images_from_docx(docx_path, output_dir="images", jpeg_quality=60):
         return None
 
 
-import io
-from PIL import Image
-import zipfile
-from pathlib import Path
-
 def compress_images_in_docx(input_path, jpeg_quality=1):
     input_path = Path(input_path)
     if not input_path.exists():
@@ -96,12 +96,12 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
 
                 new_docx_zip.writestr(item, data)
 
-    if not image_found:
-        print("ℹ️ В документе не найдено изображений. Сжатие не требуется.")
-        return input_path
-
     with open(output_path, 'wb') as f:
         f.write(new_docx_io.getvalue())
 
-    print(f"📦 Сжатие завершено. Сохранено в: {output_path.resolve()}")
+    if not image_found:
+        print("ℹ️ В документе не найдено изображений. Сжатие не требуется.")
+    else:
+        print(f"📦 Сжатие завершено. Сохранено в: {output_path.resolve()}")
+
     return output_path

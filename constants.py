@@ -1,4 +1,3 @@
-# config.py
 
 DEBUG_SERVER = "http://127.0.0.1:8000/"
 TEST_SERVER = "https://schedule-app-test.dokka2.duckdns.org/"
