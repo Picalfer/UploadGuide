@@ -74,6 +74,8 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
 
     output_path = Path.cwd() / f"{input_path.stem}.docx"
 
+    image_found = False
+
     with zipfile.ZipFile(input_path, 'r') as docx_zip:
         new_docx_io = io.BytesIO()
         with zipfile.ZipFile(new_docx_io, 'w') as new_docx_zip:
@@ -82,6 +84,7 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
 
                 if item.filename.startswith('word/media/') and item.filename.lower().endswith(
                         ('.png', '.jpeg', '.jpg')):
+                    image_found = True
                     try:
                         image = Image.open(io.BytesIO(data))
                         img_io = io.BytesIO()
@@ -95,6 +98,10 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
 
                 new_docx_zip.writestr(item, data)
 
+    if not image_found:
+        print("ℹ️ В документе не найдено изображений. Сжатие не требуется.")
+        return input_path
+
     with open(output_path, 'wb') as f:
         f.write(new_docx_io.getvalue())
 
@@ -103,15 +110,16 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
 
 
 def delete_path(path):
-    path = Path(path)
-    if path.is_file():
-        path.unlink()
-        print(f"🗑️ Удалён файл: {path.resolve()}")
-    elif path.is_dir():
-        shutil.rmtree(path)
-        print(f"🗑️ Удалена папка: {path.resolve()}")
-    else:
-        print(f"⚠️ Путь не найден: {path}")
+    if not path:
+        return
+    try:
+        p = Path(path)
+        if p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            shutil.rmtree(p)
+    except Exception as e:
+        print(f"⚠️ Не удалось удалить {path}: {e}")
 
 
 import re
@@ -125,6 +133,9 @@ def extract_number(name):
 
 
 def rename_images_to_match_html(images_dir_path, converted_zip_path):
+    if not images_dir_path:
+        print("⚠️ Путь к изображениям не указан — переименование пропущено.")
+        return
     images_dir = Path(images_dir_path)
     converted_zip_path = Path(converted_zip_path)
 
@@ -205,25 +216,34 @@ def prepare_upload_folder(converted_zip_path, images_dir, word_path):
     original_html_path = upload_folder / original_html_name
     html_files[0].rename(original_html_path)
 
-    # Создаём images/ и копируем туда изображения
-    images_folder = upload_folder / 'images'
-    images_folder.mkdir(exist_ok=True)
+    upload_zip_path = None
 
-    for img_path in Path(images_dir).glob('*'):
-        shutil.copy(img_path, images_folder / img_path.name)
+    # Если images_dir указан и в нём есть изображения — создаём архив
+    if images_dir and Path(images_dir).exists():
+        image_files = list(Path(images_dir).glob('*'))
+        if image_files:
+            # Создаём images/ в папке upload_folder
+            images_folder = upload_folder / 'images'
+            images_folder.mkdir(exist_ok=True)
 
-    # ✅ Создаём архив upload.zip С ТОЛЬКО images/
-    upload_zip_path = upload_folder / 'upload.zip'
-    with zipfile.ZipFile(upload_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for img_file in images_folder.glob('*'):
-            arcname = f"images/{img_file.name}"
-            zipf.write(img_file, arcname)
+            for img_path in image_files:
+                shutil.copy(img_path, images_folder / img_path.name)
+
+            # ✅ Создаём архив upload.zip С ТОЛЬКО images/
+            upload_zip_path = upload_folder / 'upload.zip'
+            with zipfile.ZipFile(upload_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for img_file in images_folder.glob('*'):
+                    arcname = f"images/{img_file.name}"
+                    zipf.write(img_file, arcname)
 
     print(f"📦 Подготовка завершена:")
     print(f"📝 HTML: {original_html_path}")
-    print(f"🗂️ ZIP:  {upload_zip_path}")
+    if upload_zip_path:
+        print(f"🗂️ ZIP:  {upload_zip_path}")
+    else:
+        print("ℹ️ Изображений нет — zip архив не создавался")
 
-    return str(original_html_path), str(upload_zip_path), upload_folder
+    return str(original_html_path), str(upload_zip_path) if upload_zip_path else None, upload_folder
 
 
 def main():
@@ -251,7 +271,16 @@ def main():
         delete_path(converted_path)
         delete_path(upload_folder_path)
 
-        """
+
+
+    except Exception as e:
+        print(f"🔴 Критическая ошибка: {e}")
+
+
+if __name__ == '__main__':
+    main()
+
+"""
         # 1. Конвертация Word -> ZIP
         print("🔄 Шаг 1/3: Конвертация Word в ZIP...")
         original_zip_path = select_and_convert()
@@ -268,10 +297,3 @@ def main():
             original_zip_path=original_zip_path
         )
         """
-
-    except Exception as e:
-        print(f"🔴 Критическая ошибка: {e}")
-
-
-if __name__ == '__main__':
-    main()
