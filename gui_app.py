@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Dict, Callable
 
+from ttkthemes import ThemedTk
+
 import constants
 from main import mainAction
 from upload_manager.level_cache import save_last_level, load_next_order
@@ -17,6 +19,7 @@ MODES = {
 class GuideUploaderApp:
     def __init__(self, root):
         self.root = root
+        self.root.iconbitmap("icon.ico")
         self.root.title("Загрузка методички")
         self.root.geometry("1200x800")
         self.root.resizable(False, False)
@@ -29,50 +32,39 @@ class GuideUploaderApp:
     def set_level_id(self, level_id):
         self.selected_level_id = level_id
 
-    def make_scrollable_frame(self, container):
-        canvas = tk.Canvas(container, borderwidth=0)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        return scrollable_frame
-
     def create_widgets(self):
-        frame = ttk.Frame(self.root, padding=20)
+        style = ttk.Style()
+        style.configure("TCombobox", font=("Segoe UI", 10), padding=4)
+        style.configure("TEntry", font=("Segoe UI", 10), padding=4)
+
+        frame = ttk.Frame(self.root, padding=(30, 20, 30, 20), style="TFrame")
+
         frame.pack(fill='both', expand=True)
 
-        top_bar = ttk.Frame(frame)
-        top_bar.pack(fill='x', anchor='ne')
+        top_bar = ttk.Frame(frame, style="TFrame")
+        top_bar.pack(fill='x', anchor='ne', pady=(0, 10))
 
-        ttk.Label(top_bar, text="Режим:").pack(side='left')
+        ttk.Label(top_bar, text="Режим:", font=("Segoe UI", 10, "bold")).pack(side='left', padx=(0, 5))
         for mode in MODES.keys():
             ttk.Radiobutton(
                 top_bar,
                 text=mode,
                 variable=self.base_url,
-                value=mode
+                value=mode,
+                style="TRadiobutton"
             ).pack(side='left', padx=(5, 0))
 
-        ttk.Label(frame, text="Загрузка методички", font=("Segoe UI", 16, "bold")).pack(pady=(20, 10))
+        ttk.Label(frame, text="Загрузка методички", font=("Segoe UI", 18, "bold"), background="#f5f6fa").pack(
+            pady=(10, 15))
 
         self.run_button = ttk.Button(frame, text="🚀 Старт", command=self.select_and_run)
-        self.run_button.pack(pady=10)
+        self.run_button.pack(pady=(0, 15))
 
-        self.steps_frame = ttk.LabelFrame(frame, text="Этапы обработки")
+        self.steps_frame = ttk.LabelFrame(frame, text="Этапы обработки", style="TLabelframe")
         self.steps_frame.pack(fill='both', expand=True, pady=10)
 
-        self.dynamic_frame = ttk.Frame(frame)
-        self.dynamic_frame.pack(fill='both', expand=True)
+        self.dynamic_frame = ttk.Frame(frame, style="TFrame")
+        self.dynamic_frame.pack(fill='both', expand=True, pady=(10, 0))
 
         self.define_steps()
 
@@ -111,6 +103,8 @@ class GuideUploaderApp:
                   font=("Segoe UI", 12)).pack(pady=(10, 5))
 
         listbox = tk.Listbox(self.dynamic_frame, height=10)
+        listbox.config(borderwidth=1, relief="flat", font=("Segoe UI", 10))
+
         for guide in guides_data['guides']:
             listbox.insert('end', f"{guide['order']}. {guide['title']}")
         listbox.pack(fill='x', pady=(0, 10))
@@ -169,6 +163,6 @@ class GuideUploaderApp:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ThemedTk(theme="radiance")
     app = GuideUploaderApp(root)
     root.mainloop()

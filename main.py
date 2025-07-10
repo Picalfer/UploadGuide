@@ -1,16 +1,10 @@
 from docx_optimizer import select_word_file, extract_images_from_docx, compress_images_in_docx
 from upload_manager.upload_flow import process_upload_flow
-from utils import delete_path
 from word_to_html_converter import convert
 from zip_postprocessor import rename_images_to_match_html, prepare_upload_folder
 
 
 def mainAction(app=None):
-    images_dir = None
-    compressed_path = None
-    converted_path = None
-    upload_folder_path = None
-
     try:
         if app:
             word_path = select_word_file()
@@ -49,9 +43,8 @@ def mainAction(app=None):
     except Exception as e:
         print(f"🔴 Критическая ошибка: {e}")
 
-    #finally:
-        #for path in [images_dir, compressed_path, converted_path, upload_folder_path]:
-            #delete_path(path)
+    # finally:
+    # delete_path(TEMP_DIR)
 
 
 if __name__ == '__main__':
