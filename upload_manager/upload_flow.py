@@ -1,9 +1,9 @@
 import os
-from typing import Dict
+from typing import Dict, Callable
 
-from constants import API_COURSES_IDS, API_GUIDES_ORDER
+import constants
 from .guide_uploader import upload_guide  # Импортируем конкретную функцию
-from .level_cache import save_last_level, load_last_level, load_next_order
+from .level_cache import save_last_level, load_next_order
 
 
 def get_available_courses(api_url: str) -> Dict:
@@ -13,35 +13,11 @@ def get_available_courses(api_url: str) -> Dict:
     return response.json()
 
 
-def select_level_interactive(courses_data: Dict) -> int:
-    """Интерактивный выбор уровня с возможностью использовать последний"""
-    last_level = load_last_level()
+def select_level_interactive(courses_data: Dict, app, callback: Callable[[int], None]):
+    def on_selected(level_id: int):
+        callback(level_id)
 
-    print("\n📚 Доступные курсы и уровни:")
-    for course in courses_data['courses']:
-        print(f"📘 {course['course_title']} (Course ID: {course['course_id']})")
-        for level in course['levels']:
-            print(f"  └── 📗 {level['level_title']} (Level ID: {level['level_id']})")
-
-    while True:
-        if last_level:
-            prompt = (
-                f"\nВведите ID нужного уровня (или 'y' для использования "
-                f"последнего уровня {last_level}): "
-            )
-        else:
-            prompt = "\nВведите ID нужного уровня: "
-
-        user_input = input(prompt).strip().lower()
-
-        if user_input == 'y' and last_level:
-            return last_level
-        elif user_input.isdigit():
-            level_id = int(user_input)
-            save_last_level(level_id)  # Сохраняем новый выбор
-            return level_id
-
-        print("❌ Некорректный ввод. Введите ID уровня или 'y'")
+    app.ask_level_selection(courses_data, on_selected)
 
 
 import requests
@@ -86,50 +62,58 @@ def select_order_interactive(guides_data: Dict, level_id: int) -> int:
 
         print(f"❌ Некорректный ввод. Введите число от 1 до {max_order + 1}")
 
-
 def process_upload_flow(
+        app,
         html_path: str,
-        assets_zip_path: Optional[str],  # Явно указываем, что может быть None
+        assets_zip_path: Optional[str],
         original_zip_path: str,
-        auth_config_path: str = 'api_config.txt'
-) -> Optional[Dict]:
-    """Полный процесс загрузки с выбором порядка"""
+        auth_config_path: str = 'api_config.txt',
+        callback: Optional[Callable[[Optional[Dict]], None]] = None
+):
     try:
-        # 1. Получаем список курсов и выбираем уровень
-        courses_data = get_available_courses(API_COURSES_IDS)
-        level_id = select_level_interactive(courses_data)
+        courses_data = get_available_courses(constants.API_COURSES_IDS)
 
-        # 2. Получаем методички уровня и выбираем порядок
-        guides_data = get_level_guides(level_id, API_GUIDES_ORDER)
-        if not guides_data:
-            print("❌ Не удалось получить данные о методичках")
-            return None
+        def after_level_selected(level_id: int):
+            try:
+                guides_data = get_level_guides(level_id, constants.API_GUIDES_ORDER)
+                if not guides_data:
+                    print("❌ Не удалось получить данные о методичках")
+                    if callback:
+                        callback(None)
+                    return
 
-        order = select_order_interactive(guides_data, level_id)
+                # Тут можно сделать аналогичный выбор порядка с callback (если нужно)
+                order = select_order_interactive(guides_data, level_id)
 
-        # 3. Загрузка на сервер
-        title = os.path.splitext(os.path.basename(original_zip_path))[0]
+                title = os.path.splitext(os.path.basename(original_zip_path))[0]
 
-        print("\n🔄 Загрузка на сервер...")
+                print("\n🔄 Загрузка на сервер...")
 
-        # Формируем параметры для upload_guide
-        upload_kwargs = {
-            'html_path': html_path,
-            'level_id': level_id,
-            'title': title,
-            'order': order,
-            'config_path': auth_config_path
-        }
+                upload_kwargs = {
+                    'html_path': html_path,
+                    'level_id': level_id,
+                    'title': title,
+                    'order': order,
+                    'config_path': auth_config_path
+                }
 
-        # Добавляем zip_path только если он указан и существует
-        if assets_zip_path and os.path.exists(assets_zip_path):
-            upload_kwargs['zip_path'] = assets_zip_path
+                if assets_zip_path and os.path.exists(assets_zip_path):
+                    upload_kwargs['zip_path'] = assets_zip_path
 
-        response = upload_guide(**upload_kwargs)
+                response = upload_guide(**upload_kwargs)
 
-        print(f"✅ Успешно загружено как методичка #{order}!")
-        return response
+                print(f"✅ Успешно загружено как методичка #{order}!")
+                if callback:
+                    callback(response)
+            except Exception as e:
+                print(f"❌ Ошибка загрузки: {e}")
+                if callback:
+                    callback(None)
+
+        select_level_interactive(courses_data, app, after_level_selected)
 
     except Exception as e:
         print(f"❌ Ошибка загрузки: {e}")
-        return None
+        if callback:
+            callback(None)
+

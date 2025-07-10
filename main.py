@@ -5,40 +5,54 @@ from word_to_html_converter import convert
 from zip_postprocessor import rename_images_to_match_html, prepare_upload_folder
 
 
-def main():
+def mainAction(app=None):
     images_dir = None
     compressed_path = None
     converted_path = None
     upload_folder_path = None
 
     try:
-        word_path = select_word_file()
-        images_dir = extract_images_from_docx(word_path)
-        compressed_path = compress_images_in_docx(word_path)
-        converted_path = convert(compressed_path)
+        if app:
+            word_path = select_word_file()
+            app.mark_step_done("word_selected")
 
-        rename_images_to_match_html(
-            images_dir_path=images_dir,
-            converted_zip_path=converted_path
-        )
+            images_dir = extract_images_from_docx(word_path)
+            app.mark_step_done("images_extracted")
 
-        html_path, upload_zip_path, upload_folder_path = prepare_upload_folder(
-            converted_path, images_dir, word_path
-        )
+            compressed_path = compress_images_in_docx(word_path)
+            app.mark_step_done("docx_compressed")
 
-        process_upload_flow(
-            html_path=html_path,
-            assets_zip_path=upload_zip_path,
-            original_zip_path=converted_path
-        )
+            converted_path = convert(compressed_path)
+            app.mark_step_done("html_converted")
+
+            rename_images_to_match_html(
+                images_dir_path=images_dir,
+                converted_zip_path=converted_path
+            )
+            app.mark_step_done("images_renamed")
+
+            html_path, upload_zip_path, upload_folder_path = prepare_upload_folder(
+                converted_path, images_dir, word_path
+            )
+            app.mark_step_done("upload_prepared")
+
+            process_upload_flow(
+                html_path=html_path,
+                assets_zip_path=upload_zip_path,
+                original_zip_path=converted_path,
+                app=app
+            )
+            app.mark_step_done("uploaded")
+        else:
+            print("App is not initialized")
 
     except Exception as e:
         print(f"🔴 Критическая ошибка: {e}")
 
-    finally:
-        for path in [images_dir, compressed_path, converted_path, upload_folder_path]:
-            delete_path(path)
+    #finally:
+        #for path in [images_dir, compressed_path, converted_path, upload_folder_path]:
+            #delete_path(path)
 
 
 if __name__ == '__main__':
-    main()
+    mainAction()

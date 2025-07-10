@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 
 import requests
 
-from constants import API_GUIDE_UPLOAD
+import constants
 
 
 def load_auth_config(config_path: str = 'api_config.txt') -> Tuple[str, str]:
@@ -46,7 +46,7 @@ def upload_guide(
 
     try:
         response = requests.post(
-            url=API_GUIDE_UPLOAD,
+            url=constants.API_GUIDE_UPLOAD,
             files=files,
             data={
                 'level_id': level_id,
