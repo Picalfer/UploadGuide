@@ -6,6 +6,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
+from constants import TEMP_DIR
+
 
 def convert(word_path):
     converter = WordToHtmlConverter()
@@ -29,7 +31,7 @@ class WordToHtmlConverter:
     def convert(self, word_path) -> Tuple[bool, Optional[str]]:
         try:
             original_name = os.path.splitext(os.path.basename(word_path))[0]
-            output_zip = os.path.join(os.getcwd(), f"{original_name}.zip")
+            output_zip = TEMP_DIR / f"{original_name}.zip"
 
             if self._convert_to_zip(word_path, output_zip, original_name):
                 print(f"✅ Конвертация прошла успешно. Файл сохранён: {output_zip}")

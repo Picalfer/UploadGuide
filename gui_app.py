@@ -5,7 +5,7 @@ from typing import Dict, Callable
 
 import constants
 from main import mainAction
-from upload_manager.level_cache import save_last_level
+from upload_manager.level_cache import save_last_level, load_next_order
 
 MODES = {
     "DEBUG": constants.DEBUG_SERVER,
@@ -18,7 +18,7 @@ class GuideUploaderApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Загрузка методички")
-        self.root.geometry("700x600")
+        self.root.geometry("1200x800")
         self.root.resizable(False, False)
         self.selected_level_id = None
         self.base_url = tk.StringVar(value="DEBUG")
@@ -28,6 +28,24 @@ class GuideUploaderApp:
 
     def set_level_id(self, level_id):
         self.selected_level_id = level_id
+
+    def make_scrollable_frame(self, container):
+        canvas = tk.Canvas(container, borderwidth=0)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        return scrollable_frame
 
     def create_widgets(self):
         frame = ttk.Frame(self.root, padding=20)
@@ -84,6 +102,42 @@ class GuideUploaderApp:
                 on_selected(level_id)
 
         ttk.Button(self.dynamic_frame, text="✅ Подтвердить", command=on_confirm).pack(pady=5)
+
+    def ask_order_selection(self, guides_data: Dict, level_id: int, on_selected: Callable[[int], None]):
+        for widget in self.dynamic_frame.winfo_children():
+            widget.destroy()
+
+        ttk.Label(self.dynamic_frame, text=f"📝 Методички в уровне «{guides_data['level_title']}»",
+                  font=("Segoe UI", 12)).pack(pady=(10, 5))
+
+        listbox = tk.Listbox(self.dynamic_frame, height=10)
+        for guide in guides_data['guides']:
+            listbox.insert('end', f"{guide['order']}. {guide['title']}")
+        listbox.pack(fill='x', pady=(0, 10))
+
+        max_order = max([g['order'] for g in guides_data['guides']] or [0])
+        next_order = load_next_order()
+
+        input_frame = ttk.Frame(self.dynamic_frame)
+        input_frame.pack(pady=5)
+
+        ttk.Label(input_frame, text="Порядковый номер:").pack(side='left')
+        order_var = tk.StringVar(value=str(next_order or max_order + 1))
+        entry = ttk.Entry(input_frame, textvariable=order_var, width=5)
+        entry.pack(side='left', padx=5)
+
+        def confirm():
+            value = entry.get().strip()
+            if value.isdigit():
+                order = int(value)
+                if 1 <= order <= max_order + 1:
+                    save_last_level(level_id, order)
+                    self.mark_step_done("order_selected")
+                    on_selected(order)
+                    return
+            tk.messagebox.showerror("Ошибка", f"Введите число от 1 до {max_order + 1}")
+
+        ttk.Button(self.dynamic_frame, text="✅ Подтвердить", command=confirm).pack(pady=5)
 
     def define_steps(self):
         step_defs = [

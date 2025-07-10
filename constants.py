@@ -17,3 +17,9 @@ def set_base_url(url: str):
     API_COURSES_IDS = MATERIALS_API + "courses-with-levels/"
     API_GUIDES_ORDER = MATERIALS_API + "level-guides/"
     API_GUIDE_UPLOAD = MATERIALS_API + "upload-guide/"
+
+
+from pathlib import Path
+
+TEMP_DIR = Path("temp")
+TEMP_DIR.mkdir(exist_ok=True)

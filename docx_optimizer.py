@@ -6,6 +6,8 @@ from tkinter import filedialog
 
 from PIL import Image
 
+from constants import TEMP_DIR
+
 
 def select_word_file() -> str:
     """Выбор Word файла через проводник"""
@@ -22,7 +24,7 @@ def select_word_file() -> str:
     return file_path
 
 
-def extract_images_from_docx(docx_path, output_dir="images", jpeg_quality=60):
+def extract_images_from_docx(docx_path, output_dir=TEMP_DIR / "images", jpeg_quality=60):
     try:
         docx_path = Path(docx_path)
         if not docx_path.exists():
@@ -70,7 +72,7 @@ def compress_images_in_docx(input_path, jpeg_quality=1):
         print(f"❌ Файл {input_path} не найден")
         return None
 
-    output_path = Path.cwd() / f"{input_path.stem}.docx"
+    output_path = TEMP_DIR / f"{input_path.stem}.docx"
 
     image_found = False
 

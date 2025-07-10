@@ -6,6 +6,8 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
+from constants import TEMP_DIR
+
 
 def extract_number(name):
     match = re.search(r'(\d+)', name.stem)
@@ -73,7 +75,7 @@ def rename_images_to_match_html(images_dir_path, converted_zip_path):
 
 
 def prepare_upload_folder(converted_zip_path, images_dir, word_path):
-    upload_folder = Path('upload_folder')
+    upload_folder = Path(TEMP_DIR / 'upload_folder')
     if upload_folder.exists():
         shutil.rmtree(upload_folder)
     upload_folder.mkdir()

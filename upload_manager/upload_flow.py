@@ -62,6 +62,7 @@ def select_order_interactive(guides_data: Dict, level_id: int) -> int:
 
         print(f"❌ Некорректный ввод. Введите число от 1 до {max_order + 1}")
 
+
 def process_upload_flow(
         app,
         html_path: str,
@@ -82,29 +83,30 @@ def process_upload_flow(
                         callback(None)
                     return
 
-                # Тут можно сделать аналогичный выбор порядка с callback (если нужно)
-                order = select_order_interactive(guides_data, level_id)
+                def after_order_selected(order: int):
+                    title = os.path.splitext(os.path.basename(original_zip_path))[0]
 
-                title = os.path.splitext(os.path.basename(original_zip_path))[0]
+                    print("\n🔄 Загрузка на сервер...")
 
-                print("\n🔄 Загрузка на сервер...")
+                    upload_kwargs = {
+                        'html_path': html_path,
+                        'level_id': level_id,
+                        'title': title,
+                        'order': order,
+                        'config_path': auth_config_path
+                    }
 
-                upload_kwargs = {
-                    'html_path': html_path,
-                    'level_id': level_id,
-                    'title': title,
-                    'order': order,
-                    'config_path': auth_config_path
-                }
+                    if assets_zip_path and os.path.exists(assets_zip_path):
+                        upload_kwargs['zip_path'] = assets_zip_path
 
-                if assets_zip_path and os.path.exists(assets_zip_path):
-                    upload_kwargs['zip_path'] = assets_zip_path
+                    response = upload_guide(**upload_kwargs)
 
-                response = upload_guide(**upload_kwargs)
+                    print(f"✅ Успешно загружено как методичка #{order}!")
+                    if callback:
+                        callback(response)
 
-                print(f"✅ Успешно загружено как методичка #{order}!")
-                if callback:
-                    callback(response)
+                app.ask_order_selection(guides_data, level_id, after_order_selected)
+
             except Exception as e:
                 print(f"❌ Ошибка загрузки: {e}")
                 if callback:
@@ -116,4 +118,3 @@ def process_upload_flow(
         print(f"❌ Ошибка загрузки: {e}")
         if callback:
             callback(None)
-
