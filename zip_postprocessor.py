@@ -106,11 +106,11 @@ def prepare_upload_folder(converted_zip_path, images_dir, word_path):
             for img_path in image_files:
                 shutil.copy(img_path, images_folder / img_path.name)
 
-            # ✅ Создаём архив upload.zip С ТОЛЬКО images/
+            # ✅ Создаём архив upload.zip с картинками
             upload_zip_path = upload_folder / 'upload.zip'
             with zipfile.ZipFile(upload_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for img_file in images_folder.glob('*'):
-                    arcname = f"images/{img_file.name}"
+                    arcname = img_file.name
                     zipf.write(img_file, arcname)
 
     print(f"📦 Подготовка завершена:")
