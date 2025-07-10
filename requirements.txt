@@ -1,0 +1,5 @@
+requests~=2.32.4
+pillow~=11.3.0
+protobuf~=6.31.1
+google-api-python-client~=2.176.0
+beautifulsoup4~=4.13.4
