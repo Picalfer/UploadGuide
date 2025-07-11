@@ -74,6 +74,26 @@ def rename_images_to_match_html(images_dir_path, converted_zip_path):
         print("✅ Переименование изображений под html завершено.")
 
 
+def prepare_html(html_path):
+    # Чтение файла
+    with open(html_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+
+    # Очистка редиректов от Google
+    cleaned_content = re.sub(
+        r'https?://www\.google\.com/url\?q=([^&]+)&[^"]+',
+        lambda m: m.group(1),
+        html_content
+    )
+
+    # Парсинг HTML
+    soup = BeautifulSoup(cleaned_content, 'html.parser')
+
+    # Запись обратно в файл (отдельно от чтения)
+    with open(html_path, 'w', encoding='utf-8') as file:
+        file.write(str(soup))
+
+
 def prepare_upload_folder(converted_zip_path, images_dir, word_path):
     upload_folder = Path(TEMP_DIR / 'upload_folder')
     if upload_folder.exists():
@@ -120,4 +140,5 @@ def prepare_upload_folder(converted_zip_path, images_dir, word_path):
     else:
         print("ℹ️ Изображений нет — zip архив не создавался")
 
+    prepare_html(original_html_path)
     return str(original_html_path), str(upload_zip_path) if upload_zip_path else None, upload_folder
