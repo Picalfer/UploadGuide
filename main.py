@@ -1,7 +1,31 @@
+import re
+
+from bs4 import BeautifulSoup
+
 from docx_optimizer import select_word_file, extract_images_from_docx, compress_images_in_docx
 from upload_manager.upload_flow import process_upload_flow
 from word_to_html_converter import convert
 from zip_postprocessor import rename_images_to_match_html, prepare_upload_folder
+
+
+def prepare_html(html_path):
+    # Чтение файла
+    with open(html_path, 'r', encoding='utf-8') as file:
+        html_content = file.read()
+
+    # Очистка редиректов от Google
+    cleaned_content = re.sub(
+        r'https?://www\.google\.com/url\?q=([^&]+)&[^"]+',
+        lambda m: m.group(1),
+        html_content
+    )
+
+    # Парсинг HTML
+    soup = BeautifulSoup(cleaned_content, 'html.parser')
+
+    # Запись обратно в файл (отдельно от чтения)
+    with open(html_path, 'w', encoding='utf-8') as file:
+        file.write(str(soup))
 
 
 def mainAction(app=None):
@@ -29,6 +53,8 @@ def mainAction(app=None):
                 converted_path, images_dir, word_path
             )
             app.mark_step_done("upload_prepared")
+
+            prepare_html(html_path)
 
             process_upload_flow(
                 html_path=html_path,
