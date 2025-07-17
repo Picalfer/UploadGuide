@@ -86,122 +86,144 @@ def remove_google_redirects(html_content):
 def process_code_sections(html_content):
     """Обрабатывает блоки кода, заменяя text-indent и margin-left на пробелы и добавляя нумерацию строк"""
     soup = BeautifulSoup(html_content, 'html.parser')
+    start_markers, end_markers = _find_code_markers(soup)
 
-    # Находим маркеры начала и конца кода
+    _validate_markers(start_markers, end_markers)
+
+    for start, end in zip(start_markers, end_markers):
+        code_content = _collect_code_content(start, end)
+        _process_code_elements(code_content)
+        code_block = _create_code_block(soup, code_content)
+
+        _replace_with_code_block(start, end, code_block)
+
+    return str(soup)
+
+
+def _find_code_markers(soup):
+    """Находит маркеры начала и конца кода в HTML"""
     start_markers = soup.find_all(lambda tag:
                                   tag.name == 'p' and
                                   'START_CODE_SECTION_7239' in tag.get_text())
     end_markers = soup.find_all(lambda tag:
                                 tag.name == 'p' and
                                 'END_CODE_SECTION_7239' in tag.get_text())
+    return start_markers, end_markers
 
+
+def _validate_markers(start_markers, end_markers):
+    """Проверяет, что маркеры кода парные"""
     if len(start_markers) != len(end_markers):
         raise ValueError("Непарные маркеры кода")
 
-    for start, end in zip(start_markers, end_markers):
-        code_content = []
-        current = start.next_sibling
 
-        # Собираем содержимое блока кода
-        while current and current != end:
-            code_content.append(current)
-            current = current.next_sibling
+def _collect_code_content(start_marker, end_marker):
+    """Собирает содержимое между маркерами начала и конца кода"""
+    code_content = []
+    current = start_marker.next_sibling
 
-        # Обрабатываем каждый элемент внутри блока кода
-        for element in code_content:
-            if element.name == 'p' and element.get('style', ''):
-                styles = element['style'].split(';')
-                new_styles = []
-                indent_size = 0
+    while current and current != end_marker:
+        code_content.append(current)
+        current = current.next_sibling
 
-                # Обрабатываем стили
-                for style in styles:
-                    style = style.strip()
-                    if not style:
-                        continue
+    return code_content
 
-                    # Обработка text-indent
-                    if 'text-indent' in style:
-                        try:
-                            # Парсим значение (например "36pt" или "2em")
-                            value = style.split(':')[1].strip()
-                            if 'pt' in value:
-                                pt_value = float(value.replace('pt', ''))
-                                indent_size += int(pt_value / 9)  # Примерно 4 пробела для 36pt
-                            elif 'em' in value:
-                                em_value = float(value.replace('em', ''))
-                                indent_size += int(em_value * 4)  # Примерно 4 пробела на 1em
-                            elif 'px' in value:
-                                px_value = float(value.replace('px', ''))
-                                indent_size += int(px_value / 9)  # Эмпирическое соотношение
-                            else:
-                                # Если нет единиц измерения, считаем пикселями
-                                indent_size += int(float(value) / 9)
-                        except (ValueError, IndexError):
-                            pass
 
-                    # Обработка margin-left
-                    elif 'margin-left' in style:
-                        try:
-                            value = style.split(':')[1].strip()
-                            if 'pt' in value:
-                                pt_value = float(value.replace('pt', ''))
-                                indent_size += int(pt_value / 9)
-                            elif 'em' in value:
-                                em_value = float(value.replace('em', ''))
-                                indent_size += int(em_value * 4)
-                            elif 'px' in value:
-                                px_value = float(value.replace('px', ''))
-                                indent_size += int(px_value / 9)
-                            elif 'cm' in value:
-                                cm_value = float(value.replace('cm', ''))
-                                indent_size += int(cm_value * 28.35 / 9)  # 1cm ≈ 28.35pt
-                            else:
-                                # Если нет единиц измерения, считаем пикселями
-                                indent_size += int(float(value) / 9)
-                        except (ValueError, IndexError):
-                            pass
-                    else:
-                        new_styles.append(style)
+def _process_code_elements(code_content):
+    """Обрабатывает элементы кода, заменяя отступы на пробелы"""
+    for element in code_content:
+        if element.name == 'p' and element.get('style', ''):
+            styles = element['style'].split(';')
+            new_styles, indent_size = _process_styles(styles)
 
-                if indent_size > 0:
-                    element['style'] = ';'.join(new_styles).strip(';')
-                    indent = ' ' * indent_size
+            if indent_size > 0:
+                element['style'] = ';'.join(new_styles).strip(';')
+                _apply_indent_to_element(element, indent_size)
 
-                    # Добавляем отступ к первому текстовому содержимому
-                    for content in element.contents:
-                        if isinstance(content, str) and content.strip():
-                            content.replace_with(indent + content)
-                            break
-                    else:
-                        first_span = element.find('span')
-                        if first_span and first_span.string:
-                            first_span.string.replace_with(indent + first_span.string)
 
-        # Создаем блок кода с нумерацией строк и CSS для сохранения пробелов
-        new_div = soup.new_tag('div', **{
-            'class': 'code-block',
-            'style': 'white-space: pre; font-family: monospace;'  # Сохраняет пробелы
-        })
+def _process_styles(styles):
+    """Обрабатывает стили элемента, вычисляя общий отступ"""
+    new_styles = []
+    indent_size = 0
 
-        for i, content in enumerate(code_content, 1):
-            line_div = soup.new_tag('div', **{'class': 'line'})
-            line_div.append(content)
-            new_div.append(line_div)
+    for style in styles:
+        style = style.strip()
+        if not style:
+            continue
 
-        start.insert_before(new_div)
+        if 'text-indent' in style:
+            indent_size += _parse_style_value(style)
+        elif 'margin-left' in style:
+            indent_size += _parse_style_value(style)
+        else:
+            new_styles.append(style)
 
-        # Удаляем старые элементы
-        current = start
-        while current and current != end:
-            next_node = current.next_sibling
-            current.decompose()
-            current = next_node
+    return new_styles, indent_size
 
-        if end:
-            end.decompose()
 
-    return str(soup)
+def _parse_style_value(style):
+    """Парсит значение стиля и преобразует его в количество пробелов"""
+    try:
+        value = style.split(':')[1].strip()
+        if 'pt' in value:
+            pt_value = float(value.replace('pt', ''))
+            return int(pt_value / 9)
+        elif 'em' in value:
+            em_value = float(value.replace('em', ''))
+            return int(em_value * 4)
+        elif 'px' in value:
+            px_value = float(value.replace('px', ''))
+            return int(px_value / 9)
+        elif 'cm' in value:
+            cm_value = float(value.replace('cm', ''))
+            return int(cm_value * 28.35 / 9)
+        else:
+            return int(float(value) / 9)
+    except (ValueError, IndexError):
+        return 0
+
+
+def _apply_indent_to_element(element, indent_size):
+    """Добавляет пробелы в начало элемента в соответствии с вычисленным отступом"""
+    indent = ' ' * indent_size
+
+    for content in element.contents:
+        if isinstance(content, str) and content.strip():
+            content.replace_with(indent + content)
+            return
+
+    first_span = element.find('span')
+    if first_span and first_span.string:
+        first_span.string.replace_with(indent + first_span.string)
+
+
+def _create_code_block(soup, code_content):
+    """Создает блок кода с нумерацией строк"""
+    new_div = soup.new_tag('div', **{
+        'class': 'code-block',
+        'style': 'white-space: pre; font-family: monospace;'
+    })
+
+    for i, content in enumerate(code_content, 1):
+        line_div = soup.new_tag('div', **{'class': 'line'})
+        line_div.append(content)
+        new_div.append(line_div)
+
+    return new_div
+
+
+def _replace_with_code_block(start_marker, end_marker, code_block):
+    """Заменяет оригинальное содержимое новым блоком кода"""
+    start_marker.insert_before(code_block)
+
+    current = start_marker
+    while current and current != end_marker:
+        next_node = current.next_sibling
+        current.decompose()
+        current = next_node
+
+    if end_marker:
+        end_marker.decompose()
 
 
 def prepare_html(html_path):
