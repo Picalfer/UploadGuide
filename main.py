@@ -1,7 +1,8 @@
+import zip_postprocessor.main
 from docx_optimizer import select_word_file, extract_images_from_docx, compress_images_in_docx
 from upload_manager.upload_flow import process_upload_flow
 from word_to_html_converter import convert
-from zip_postprocessor import rename_images_to_match_html, prepare_upload_folder
+from zip_postprocessor import rename_images_to_match_html
 
 
 def mainAction(app=None):
@@ -28,7 +29,7 @@ def mainAction(app=None):
             )
             app.mark_step_done("images_renamed")
 
-            html_path, upload_zip_path, upload_folder_path = prepare_upload_folder(
+            html_path, upload_zip_path, upload_folder_path = zip_postprocessor.main.run_postprocessing(
                 converted_path, images_dir, word_path
             )
             app.mark_step_done("upload_prepared")
