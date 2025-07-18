@@ -1,36 +1,49 @@
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.code-block').forEach(block => {
+    document.querySelectorAll(".code-block").forEach(block => {
+        // 1. Собираем строки кода
+        const lines = Array.from(block.querySelectorAll("code")).map(c => c.textContent);
+        const fullText = lines.join("\n");
+
+        // 2. Подсвечиваем весь код одной строкой
+        const result = hljs.highlightAuto(fullText);
+        const highlightedLines = result.value.split('\n');
+
+        // 3. Очищаем и пересобираем блок с подсветкой
+        block.innerHTML = "";
+        highlightedLines.forEach(lineHtml => {
+            const lineDiv = document.createElement("div");
+            lineDiv.classList.add("line");
+
+            const codeTag = document.createElement("code");
+            codeTag.className = "hljs";
+            codeTag.innerHTML = lineHtml || "\u200b"; // пустая строка
+
+            lineDiv.appendChild(codeTag);
+            block.appendChild(lineDiv);
+        });
+
+        // 4. Добавляем кнопку копирования
         const btn = document.createElement('button');
         btn.className = 'copy-btn';
         btn.title = 'Копировать код';
         btn.textContent = 'Копировать';
-
         block.appendChild(btn);
 
+        // 5. Обработчик копирования
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
 
-            // Собираем текст с учетом всех отступов
             const lines = Array.from(block.querySelectorAll('.line')).map(line => {
-                // Получаем вычисленные стили элемента
                 const style = window.getComputedStyle(line);
-
-                // Парсим text-indent и margin-left
                 const textIndent = parseIndent(style.textIndent);
                 const marginLeft = parseIndent(style.marginLeft);
-
-                // Суммируем отступы (в пунктах)
                 const totalIndent = textIndent + marginLeft;
-
-                // Конвертируем пункты в табы (1 таб ≈ 36pt)
                 const tabCount = Math.round(totalIndent / 36);
                 const indent = '\t'.repeat(tabCount > 0 ? tabCount : 0);
 
-                // Удаляем номер строки если есть и добавляем вычисленный отступ
                 return indent + line.textContent.replace(/^\d+\s/gm, '').trimEnd();
             });
 
-            // Объединяем строки, убирая полностью пустые
             const code = lines.filter(line => line.trim() !== '').join('\n');
 
             navigator.clipboard.writeText(code)
@@ -52,16 +65,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }, 2000);
                 });
         });
-
     });
 
-    // Функция для конвертации значений в пункты
+    // 💡 Вспомогательная функция
     function parseIndent(value) {
-        if (value.endsWith('pt')) {
-            return parseFloat(value);
-        } else if (value.endsWith('px')) {
-            return parseFloat(value) * 0.75; // 1px ≈ 0.75pt
-        }
-        return 0;
+        return parseFloat(value) || 0;
     }
 });

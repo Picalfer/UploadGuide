@@ -76,18 +76,28 @@ def _apply_indent_to_element(element, indent_size):
 
 
 def _create_code_block(soup, code_content):
-    """Создает блок кода с нумерацией строк"""
-    new_div = soup.new_tag('div', **{
-        'class': 'code-block',
-        'style': 'white-space: pre; font-family: monospace;'
-    })
+    """Создает кастомный блок кода с построчной оберткой для стилизации и подсветки"""
 
-    for i, content in enumerate(code_content, 1):
+    # Внешний контейнер
+    code_block = soup.new_tag('div', **{'class': 'code-block'})
+
+    # Получаем весь текст кода
+    raw_lines = []
+    for element in code_content:
+        text = element.get_text()
+        raw_lines.extend(text.splitlines())
+
+    # Каждую строку оборачиваем в div.line с вложенным <code>
+    for line in raw_lines:
         line_div = soup.new_tag('div', **{'class': 'line'})
-        line_div.append(content)
-        new_div.append(line_div)
 
-    return new_div
+        code_tag = soup.new_tag('code')
+        code_tag.string = line if line.strip() != '' else '\u200b'  # невидимый символ для пустых строк
+
+        line_div.append(code_tag)
+        code_block.append(line_div)
+
+    return code_block
 
 
 def _replace_with_code_block(start_marker, end_marker, code_block):
