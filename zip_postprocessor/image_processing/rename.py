@@ -44,19 +44,22 @@ def rename_images_to_match_html(images_dir_path, converted_zip_path):
             soup = BeautifulSoup(f, 'html.parser')
 
         img_tags = soup.find_all('img')
-        html_image_names = [Path(tag['src']).name for tag in img_tags if tag.get('src')]
+
+        # Собираем ВСЕ имена из HTML (с дубликатами) и УНИКАЛЬНЫЕ имена
+        html_image_names_all = [Path(tag['src']).name for tag in img_tags if tag.get('src')]
+        html_image_names_unique = list(dict.fromkeys(html_image_names_all))  # сохраняем порядок
 
         # Локальные изображения
         local_images = sorted(images_dir.glob("*.jpg"),
                               key=extract_number)  # без сортировки будет неправильная нумерация
 
-        if len(local_images) != len(html_image_names):
+        if len(local_images) != len(html_image_names_unique):
             local_image_names = [img.name for img in local_images]
-            print("\n⚠️ Количество изображений не совпадает!")
+            print("\n⚠️ Количество УНИКАЛЬНЫХ изображений не совпадает!")
 
-            print(f"🖼️ Изображений в HTML: {len(html_image_names)}")
+            print(f"🖼️ Изображений в HTML: {len(html_image_names_unique)}")
             print("Список изображений в HTML:")
-            for i, name in enumerate(html_image_names, 1):
+            for i, name in enumerate(html_image_names_unique, 1):
                 print(f"{i:3d}. {name}")
 
             print(f"\n📁 Найдено файлов в папке images/: {len(local_images)}")
@@ -65,7 +68,7 @@ def rename_images_to_match_html(images_dir_path, converted_zip_path):
                 print(f"{i:3d}. {name}")
 
             # Находим различия между списками
-            html_set = set(html_image_names)
+            html_set = set(html_image_names_unique)
             local_set = set(local_image_names)
 
             missing_in_local = html_set - local_set
@@ -92,7 +95,7 @@ def rename_images_to_match_html(images_dir_path, converted_zip_path):
             temp_names.append(temp_name)
 
         # Переименование по порядку
-        for temp_path, final_name in zip(temp_names, html_image_names):
+        for temp_path, final_name in zip(temp_names, html_image_names_unique):
             new_path = images_dir / final_name
             temp_path.rename(new_path)
 
