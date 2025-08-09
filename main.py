@@ -23,17 +23,10 @@ def mainAction(app=None):
             converted_path = convert(compressed_path)
             app.mark_step_done("html_converted")
 
-            """
-            rename_images_to_match_html(
-                images_dir_path=images_dir,
-                converted_zip_path=converted_path
-            )
-            app.mark_step_done("images_renamed")
-            """
-
             html_path, upload_zip_path, upload_folder_path = zip_postprocessor.main.run_postprocessing(
                 converted_path, images_dir, word_path
             )
+            app.mark_step_done("images_renamed")
             app.mark_step_done("upload_prepared")
 
             process_upload_flow(
