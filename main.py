@@ -1,15 +1,15 @@
 import zip_postprocessor.main
 from docx_optimizer import select_word_file, extract_images_from_docx, compress_images_in_docx
 from upload_manager.upload_flow import process_upload_flow
+from utils import clear_temp_dir
 from word_to_html_converter import convert
-from zip_postprocessor import rename_images_to_match_html
 
 
 def mainAction(app=None):
     try:
         if app:
             # очищаем данные предыдущей методички
-            # delete_path(TEMP_DIR)
+            clear_temp_dir()
 
             word_path = select_word_file()
             app.mark_step_done("word_selected")
@@ -48,9 +48,6 @@ def mainAction(app=None):
 
     except Exception as e:
         print(f"🔴 Критическая ошибка: {e}")
-
-    # finally:
-    # delete_path(TEMP_DIR)
 
 
 if __name__ == '__main__':

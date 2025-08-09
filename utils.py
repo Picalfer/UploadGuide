@@ -2,14 +2,9 @@ import shutil
 from pathlib import Path
 
 
-def delete_path(path):
-    if not path:
-        return
-    try:
-        p = Path(path)
-        if p.is_file():
-            p.unlink()
-        elif p.is_dir():
-            shutil.rmtree(p)
-    except Exception as e:
-        print(f"⚠️ Не удалось удалить {path}: {e}")
+def clear_temp_dir():
+    """Очищает временную папку перед началом работы."""
+    TEMP_DIR = Path("temp")
+    if TEMP_DIR.exists():
+        shutil.rmtree(TEMP_DIR)  # Удаляем папку и всё внутри
+    TEMP_DIR.mkdir(exist_ok=True)  # Создаём заново
