@@ -1,13 +1,15 @@
 import zip_postprocessor.main
 from docx_optimizer import select_word_file, extract_images_from_docx, compress_images_in_docx
 from upload_manager.upload_flow import process_upload_flow
-from utils import clear_temp_dir
+from utils import clear_temp_dir, Status
 from word_to_html_converter import convert
 
 
 def mainAction(app=None):
     try:
         if app:
+            app.update_status(Status.PROCESSING)
+
             # очищаем данные предыдущей методички
             clear_temp_dir()
 
@@ -20,9 +22,11 @@ def mainAction(app=None):
             compressed_path = compress_images_in_docx(word_path)
             app.mark_step_done("docx_compressed")
 
+            app.update_status(Status.CONVERTING)
             converted_path = convert(compressed_path)
             app.mark_step_done("html_converted")
 
+            app.update_status(Status.PROCESSING)
             html_path, upload_zip_path, upload_folder_path = zip_postprocessor.main.run_postprocessing(
                 converted_path, images_dir, word_path
             )

@@ -8,6 +8,7 @@ from ttkthemes import ThemedTk
 import constants
 from main import mainAction
 from upload_manager.level_cache import save_last_level, load_next_order
+from utils import Status
 
 MODES = {
     "DEBUG": constants.DEBUG_SERVER,
@@ -18,6 +19,7 @@ MODES = {
 
 class GuideUploaderApp:
     def __init__(self, root):
+        self.status = Status.START.value
         self.root = root
         self.root.iconbitmap("icon.ico")
         self.root.title("Загрузка методички")
@@ -31,6 +33,10 @@ class GuideUploaderApp:
 
     def set_level_id(self, level_id):
         self.selected_level_id = level_id
+
+    def update_status(self, new_status):
+        self.status = new_status
+        self.status_label.config(text=f"Статус: {self.status.value}")
 
     def create_widgets(self):
         style = ttk.Style()
@@ -57,8 +63,14 @@ class GuideUploaderApp:
         ttk.Label(frame, text="Загрузка методички", font=("Segoe UI", 18, "bold"), background="#f5f6fa").pack(
             pady=(10, 15))
 
-        self.run_button = ttk.Button(frame, text="🚀 Старт", command=self.select_and_run)
-        self.run_button.pack(pady=(0, 15))
+        button_status_frame = ttk.Frame(frame)
+        button_status_frame.pack(pady=(0, 15))
+
+        self.run_button = ttk.Button(button_status_frame, text="🚀 Старт", command=self.select_and_run)
+        self.run_button.pack(side='left', padx=(0, 10))
+
+        self.status_label = ttk.Label(button_status_frame, text=f"Статус: {self.status}", width=40)
+        self.status_label.pack(side='left')
 
         self.steps_frame = ttk.LabelFrame(frame, text="Этапы обработки", style="TLabelframe")
         self.steps_frame.pack(fill='both', expand=True, pady=10)
@@ -69,8 +81,8 @@ class GuideUploaderApp:
         self.define_steps()
 
     def ask_level_selection(self, courses_data: Dict, on_selected: Callable[[int], None]):
-        for widget in self.dynamic_frame.winfo_children():
-            widget.destroy()
+        self.update_status(Status.SELECTING)
+        self.clear_dynamic_frame()
 
         ttk.Label(self.dynamic_frame, text="📚 Выберите уровень", font=("Segoe UI", 12)).pack(pady=(10, 5))
 
@@ -96,8 +108,7 @@ class GuideUploaderApp:
         ttk.Button(self.dynamic_frame, text="✅ Подтвердить", command=on_confirm).pack(pady=5)
 
     def ask_order_selection(self, guides_data: Dict, level_id: int, on_selected: Callable[[int], None]):
-        for widget in self.dynamic_frame.winfo_children():
-            widget.destroy()
+        self.clear_dynamic_frame()
 
         ttk.Label(self.dynamic_frame, text=f"📝 Методички в уровне «{guides_data['level_title']}»",
                   font=("Segoe UI", 12)).pack(pady=(10, 5))
@@ -133,6 +144,10 @@ class GuideUploaderApp:
 
         ttk.Button(self.dynamic_frame, text="✅ Подтвердить", command=confirm).pack(pady=5)
 
+    def clear_dynamic_frame(self):
+        for widget in self.dynamic_frame.winfo_children():
+            widget.destroy()
+
     def define_steps(self):
         step_defs = [
             ("word_selected", "Выбор Word файла"),
@@ -153,12 +168,21 @@ class GuideUploaderApp:
         if step_key in self.steps:
             self.steps[step_key].set(True)
 
+    def setup(self):
+        self.clear_dynamic_frame()
+
+        # clear checkboxes
+        for step in self.steps:
+            self.steps[step].set(False)
+
     def select_and_run(self):
-        selected_label = self.base_url.get()
-        selected_url = MODES[selected_label]
+        self.setup()
+
+        selected_server = self.base_url.get()
+        selected_url = MODES[selected_server]
         constants.set_base_url(selected_url)
 
-        print(f"🌍 Сервер: {selected_label} → {constants.BASE_URL}")
+        print(f"🌍 Сервер: {selected_server} → {constants.BASE_URL}")
         threading.Thread(target=mainAction, kwargs={"app": self}).start()
 
 

@@ -2,6 +2,7 @@ import os
 from typing import Dict, Callable
 
 import constants
+from utils import Status
 from .guide_uploader import upload_guide  # Импортируем конкретную функцию
 from .level_cache import save_last_level, load_next_order
 
@@ -72,6 +73,7 @@ def process_upload_flow(
         callback: Optional[Callable[[Optional[Dict]], None]] = None
 ):
     try:
+        app.update_status(Status.REQUESTING)
         courses_data = get_available_courses(constants.API_COURSES_IDS)
 
         def after_level_selected(level_id: int):
@@ -99,9 +101,11 @@ def process_upload_flow(
                     if assets_zip_path and os.path.exists(assets_zip_path):
                         upload_kwargs['zip_path'] = assets_zip_path
 
+                    app.update_status(Status.UPLOADING)
                     response = upload_guide(**upload_kwargs)
 
                     print(f"✅ Успешно загружено как методичка #{order}!")
+                    app.update_status(Status.SUCCESS)
                     if callback:
                         callback(response)
 
@@ -109,6 +113,7 @@ def process_upload_flow(
 
             except Exception as e:
                 print(f"❌ Ошибка загрузки: {e}")
+                app.update_status(Status.ERROR)
                 if callback:
                     callback(None)
 
@@ -116,5 +121,6 @@ def process_upload_flow(
 
     except Exception as e:
         print(f"❌ Ошибка загрузки: {e}")
+        app.update_status(Status.ERROR)
         if callback:
             callback(None)
