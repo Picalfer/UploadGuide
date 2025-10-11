@@ -4,3 +4,4 @@ protobuf~=6.31.1
 google-api-python-client~=2.176.0
 beautifulsoup4~=4.13.4
 ttkthemes~=3.2.2
+customtkinter~=5.2.2

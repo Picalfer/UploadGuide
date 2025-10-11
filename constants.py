@@ -1,7 +1,7 @@
 from pathlib import Path
 
 DEBUG_SERVER = "http://127.0.0.1:8000/"
-TEST_SERVER = "https://schedule-app-test.dokka2.duckdns.org/"
+TEST_SERVER = "https://test.schedule.kodamaclass.com/"
 PROD_SERVER = "https://schedule.kodamaclass.com/"
 
 BASE_URL = ""
