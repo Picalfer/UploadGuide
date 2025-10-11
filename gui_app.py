@@ -1,11 +1,11 @@
+import io
+import sys
 import threading
-import customtkinter as ctk
-from typing import Dict, Callable
 import tkinter as tk
 from tkinter import messagebox
-import sys
-import io
-from datetime import datetime
+from typing import Dict, Callable
+
+import customtkinter as ctk
 
 import constants
 from main import mainAction
@@ -96,7 +96,6 @@ class ModernGuideUploaderApp:
         # layout внутри main_frame — через pack
         self.create_sidebar()
         self.create_main_content()
-        #self.create_console()
 
     def create_header(self):
         title_label = ctk.CTkLabel(
@@ -223,6 +222,16 @@ class ModernGuideUploaderApp:
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(side='left')
 
+        copy_btn = ctk.CTkButton(
+            console_header,
+            text="Copy",
+            command=self.copy_console_text,
+            width=60,
+            height=25,
+            font=ctk.CTkFont(size=11)
+        )
+        copy_btn.pack(side='right', padx=(10, 10))
+
         clear_btn = ctk.CTkButton(
             console_header,
             text="Clear",
@@ -245,42 +254,30 @@ class ModernGuideUploaderApp:
         self.console_text.insert("1.0", "🚀 Guide Uploader started...\n")
         self.console_text.insert("end", "=" * 50 + "\n")
 
-    def create_console(self):
-        console_container = ctk.CTkFrame(self.main_frame, height=200, corner_radius=12)
-        console_container.pack(side='bottom', fill='x', pady=(15, 0))
-        console_container.pack_propagate(False)
+        # --- Добавляем горячие клавиши Ctrl+C ---
+        self.console_text.bind("<Control-c>", self.copy_selection)
+        self.console_text.bind("<Command-c>", self.copy_selection)  # для macOS
 
-        console_header = ctk.CTkFrame(console_container, fg_color="transparent", height=40)
-        console_header.pack(fill='x', padx=15, pady=5)
-        console_header.pack_propagate(False)
+    def copy_console_text(self):
+        """Копирует весь текст консоли в буфер обмена"""
+        text = self.console_text.get("1.0", "end-1c")
+        if text.strip():
+            self.root.clipboard_clear()
+            self.root.clipboard_append(text)
+            self.root.update()  # чтобы буфер не сбрасывался
+            print("📋 Console text copied to clipboard!")
 
-        ctk.CTkLabel(
-            console_header,
-            text="📝 Console Output",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(side='left')
-
-        clear_btn = ctk.CTkButton(
-            console_header,
-            text="Clear",
-            command=self.clear_console,
-            width=60,
-            height=25,
-            font=ctk.CTkFont(size=11)
-        )
-        clear_btn.pack(side='right')
-
-        self.console_text = ctk.CTkTextbox(
-            console_container,
-            font=ctk.CTkFont(family="Consolas", size=11),
-            wrap="word",
-            fg_color="#1a1a1a",
-            text_color="#00ff00"
-        )
-        self.console_text.pack(fill='both', expand=True, padx=15, pady=(0, 15))
-
-        self.console_text.insert("1.0", "🚀 Guide Uploader started...\n")
-        self.console_text.insert("end", "=" * 50 + "\n")
+    def copy_selection(self, event=None):
+        """Копирует только выделенный текст"""
+        try:
+            selected_text = self.console_text.get("sel.first", "sel.last")
+            self.root.clipboard_clear()
+            self.root.clipboard_append(selected_text)
+            self.root.update()
+            print("📋 Selected text copied!")
+        except tk.TclError:
+            # если ничего не выделено
+            pass
 
     def clear_console(self):
         self.console_text.delete("1.0", "end")

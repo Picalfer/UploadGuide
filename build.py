@@ -12,6 +12,7 @@ ENTRY_FILE = "gui_app.py"
 DIST_DIR = "dist"
 BUILD_DIR = "build"
 
+
 def clean_old_builds():
     """Удаляем старые сборки перед новым билдом"""
     for folder in [DIST_DIR, BUILD_DIR, f"{APP_NAME}.spec"]:
@@ -34,6 +35,7 @@ def build_exe():
         f"--icon={ICON_FILE}",
         "--hidden-import=customtkinter",
         "--hidden-import=PIL",
+        "--add-data", "service_account.json;.",
         "--clean",
         ENTRY_FILE,
     ]

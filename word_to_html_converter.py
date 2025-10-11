@@ -16,6 +16,16 @@ def convert(word_path):
         raise ValueError("Ошибка конвертации")
     return path
 
+import sys, os
+
+def get_resource_path(relative_path):
+    """Корректно находит путь к файлам, даже внутри exe"""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+SERVICE_ACCOUNT_PATH = get_resource_path("service_account.json")
+
 
 class WordToHtmlConverter:
     """
@@ -23,7 +33,7 @@ class WordToHtmlConverter:
     Сохраняет точное оригинальное имя для всех файлов
     """
 
-    def __init__(self, service_account_file: str = 'service_account.json'):
+    def __init__(self, service_account_file: str = SERVICE_ACCOUNT_PATH):
         self.SERVICE_ACCOUNT_FILE = service_account_file
         self.creds = None
         self.drive_service = None
