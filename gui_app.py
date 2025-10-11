@@ -80,6 +80,15 @@ class GuideUploaderApp:
 
         self.define_steps()
 
+    # В класс GuideUploaderApp добавьте:
+    def update_detailed_status(self, status: Status, description: str = ""):
+        """Обновление статуса с дополнительным описанием"""
+        self.status = status
+        status_text = f"Статус: {status.value}"
+        if description:
+            status_text += f" - {description}"
+        self.status_label.config(text=status_text)
+
     def ask_level_selection(self, courses_data: Dict, on_selected: Callable[[int], None]):
         self.update_status(Status.SELECTING)
         self.clear_dynamic_frame()

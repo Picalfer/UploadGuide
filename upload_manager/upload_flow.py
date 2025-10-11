@@ -72,55 +72,84 @@ def process_upload_flow(
         auth_config_path: str = 'api_config.txt',
         callback: Optional[Callable[[Optional[Dict]], None]] = None
 ):
+    """Адаптированный процесс загрузки под текущий GUI"""
+
+    def handle_error(error_msg: str, exception: Exception = None):
+        """Универсальная обработка ошибок"""
+        full_error = f"{error_msg}\n{str(exception) if exception else ''}"
+        print(f"❌ {error_msg}")
+        if exception:
+            print(f"🔧 Детали: {exception}")
+
+        app.update_status(Status.ERROR)
+        if callback:
+            callback(None)
+
+    def handle_success(response: Dict, order: int):
+        """Обработка успешной загрузки"""
+        success_msg = f"✅ Успешно загружено как методичка #{order}!"
+        print(success_msg)
+        app.update_status(Status.SUCCESS)
+        app.mark_step_done("uploaded")  # Отмечаем завершающий этап
+        if callback:
+            callback(response)
+
     try:
         app.update_status(Status.REQUESTING)
         courses_data = get_available_courses(constants.API_COURSES_IDS)
 
+        if not courses_data:
+            handle_error("Не удалось получить список курсов")
+            return
+
         def after_level_selected(level_id: int):
+            """Обработка выбора уровня"""
             try:
+                app.update_status(Status.REQUESTING)
                 guides_data = get_level_guides(level_id, constants.API_GUIDES_ORDER)
+
                 if not guides_data:
-                    print("❌ Не удалось получить данные о методичках")
-                    if callback:
-                        callback(None)
+                    handle_error("Не удалось получить данные о методичках уровня")
                     return
 
                 def after_order_selected(order: int):
-                    title = os.path.splitext(os.path.basename(original_zip_path))[0]
+                    """Обработка выбора порядка"""
+                    try:
+                        title = os.path.splitext(os.path.basename(original_zip_path))[0]
 
-                    print("\n🔄 Загрузка на сервер...")
+                        # Подготовка параметров загрузки
+                        upload_kwargs = {
+                            'html_path': html_path,
+                            'level_id': level_id,
+                            'title': title,
+                            'order': order,
+                            'config_path': auth_config_path
+                        }
 
-                    upload_kwargs = {
-                        'html_path': html_path,
-                        'level_id': level_id,
-                        'title': title,
-                        'order': order,
-                        'config_path': auth_config_path
-                    }
+                        if assets_zip_path and os.path.exists(assets_zip_path):
+                            upload_kwargs['zip_path'] = assets_zip_path
+                        else:
+                            print("ℹ️ ZIP с ассетами не будет загружен")
 
-                    if assets_zip_path and os.path.exists(assets_zip_path):
-                        upload_kwargs['zip_path'] = assets_zip_path
+                        # Обновляем статус и отмечаем этап подготовки
+                        app.update_detailed_status(Status.UPLOADING, f"Загрузка '{title}'...")
+                        app.mark_step_done("upload_prepared")
 
-                    app.update_status(Status.UPLOADING)
-                    response = upload_guide(**upload_kwargs)
+                        # Выполнение загрузки
+                        response = upload_guide(**upload_kwargs)
+                        handle_success(response, order)
 
-                    print(f"✅ Успешно загружено как методичка #{order}!")
-                    app.update_status(Status.SUCCESS)
-                    if callback:
-                        callback(response)
+                    except Exception as e:
+                        handle_error("Ошибка при загрузке на сервер", e)
 
+                # Запрос выбора порядка
                 app.ask_order_selection(guides_data, level_id, after_order_selected)
 
             except Exception as e:
-                print(f"❌ Ошибка загрузки: {e}")
-                app.update_status(Status.ERROR)
-                if callback:
-                    callback(None)
+                handle_error("Ошибка при получении данных уровня", e)
 
-        select_level_interactive(courses_data, app, after_level_selected)
+        # Запуск выбора уровня
+        app.ask_level_selection(courses_data, after_level_selected)
 
     except Exception as e:
-        print(f"❌ Ошибка загрузки: {e}")
-        app.update_status(Status.ERROR)
-        if callback:
-            callback(None)
+        handle_error("Критическая ошибка в процессе загрузки", e)
