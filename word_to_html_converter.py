@@ -7,6 +7,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from constants import TEMP_DIR
+from utils import get_resource_path
 
 
 def convert(word_path):
@@ -16,13 +17,6 @@ def convert(word_path):
         raise ValueError("Ошибка конвертации")
     return path
 
-import sys, os
-
-def get_resource_path(relative_path):
-    """Корректно находит путь к файлам, даже внутри exe"""
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
 
 SERVICE_ACCOUNT_PATH = get_resource_path("service_account.json")
 
@@ -34,6 +28,8 @@ class WordToHtmlConverter:
     """
 
     def __init__(self, service_account_file: str = SERVICE_ACCOUNT_PATH):
+        if not os.path.exists(service_account_file):
+            raise FileNotFoundError(f"Конфиг файл сервисного аккаунта google не найден: {service_account_file}")
         self.SERVICE_ACCOUNT_FILE = service_account_file
         self.creds = None
         self.drive_service = None

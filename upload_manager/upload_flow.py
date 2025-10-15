@@ -3,7 +3,7 @@ from typing import Dict, Callable
 
 import constants
 from utils import Status
-from .guide_uploader import upload_guide  # Импортируем конкретную функцию
+from .guide_uploader import upload_guide, API_CONFIG_PATH  # Импортируем конкретную функцию
 from .level_cache import save_last_level, load_next_order
 
 
@@ -69,7 +69,7 @@ def process_upload_flow(
         html_path: str,
         assets_zip_path: Optional[str],
         original_zip_path: str,
-        auth_config_path: str = 'api_config.txt',
+        auth_config_path: str = API_CONFIG_PATH,
         callback: Optional[Callable[[Optional[Dict]], None]] = None
 ):
     """Адаптированный процесс загрузки под текущий GUI"""

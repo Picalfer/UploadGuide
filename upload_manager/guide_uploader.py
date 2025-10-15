@@ -5,9 +5,12 @@ from typing import Dict, Tuple
 import requests
 
 import constants
+from utils import get_resource_path
+
+API_CONFIG_PATH = get_resource_path("api_config.txt")
 
 
-def load_auth_config(config_path: str = 'api_config.txt') -> Tuple[str, str]:
+def load_auth_config(config_path: str = API_CONFIG_PATH) -> Tuple[str, str]:
     """Загружает логин/пароль из файла"""
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Конфиг файл не найден: {config_path}")
@@ -25,7 +28,7 @@ def upload_guide(
         html_path: str,
         level_id: int,
         title: str,
-        config_path: str = 'api_config.txt',
+        config_path: str = API_CONFIG_PATH,
         order: int = 0,
         zip_path: str = None
 ) -> Dict:

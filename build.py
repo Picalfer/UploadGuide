@@ -35,6 +35,7 @@ def build_exe():
         f"--icon={ICON_FILE}",
         "--hidden-import=customtkinter",
         "--hidden-import=PIL",
+        "--add-data", "api_config.txt;.",
         "--add-data", "service_account.json;.",
         "--clean",
         ENTRY_FILE,
@@ -47,8 +48,7 @@ def build_exe():
         print("\n✅ Сборка успешно завершена!")
         dist_path = os.path.join(DIST_DIR, f"{APP_NAME}.exe")
         if os.path.exists(dist_path):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            new_name = f"{APP_NAME}_{timestamp}.exe"
+            new_name = f"{APP_NAME}.exe"
             new_path = os.path.join(DIST_DIR, new_name)
             os.rename(dist_path, new_path)
             print(f"📦 Файл сохранён как: {new_path}")
